@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WordleDictionaryLoader {
-    private static final int WORD_LENGTH = 5; // Вынес магическое число в константу
+    private static final int WORD_LENGTH = 5;
 
     public WordleDictionary load(String filename) throws IOException, WordleDictionaryException {
         List<String> words = new ArrayList<>();

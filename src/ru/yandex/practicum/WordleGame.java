@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WordleGame {
-    private static final int MAX_ATTEMPTS = 6; // Вынес магическое число в константу
-    private static final int WORD_LENGTH = 5;  // Вынес магическое число в константу
+    private static final int MAX_ATTEMPTS = 6;
+    private static final int WORD_LENGTH = 5;
 
     private final String answer;
     private int steps;
@@ -27,6 +27,7 @@ public class WordleGame {
     private final List<Character> wrongPositions;
     private final List<Character> absentLetters;
     private final List<String> attempts;
+    private String lastAnalysis;
 
     public WordleGame(WordleDictionary dictionary, PrintWriter log) {
         this.dictionary = dictionary;
@@ -37,6 +38,7 @@ public class WordleGame {
         this.wrongPositions = new ArrayList<>();
         this.absentLetters = new ArrayList<>();
         this.attempts = new ArrayList<>();
+        this.lastAnalysis = null;
 
         for (int i = 0; i < WORD_LENGTH; i++) {
             correctPositions.add(' ');
@@ -44,7 +46,7 @@ public class WordleGame {
         }
     }
 
-    public String makeGuess(String guess) throws WordleGameException {
+    public boolean makeGuess(String guess) throws WordleGameException, GameOverException {
         if (steps <= 0) {
             throw new GameOverException("Игра окончена. Закончились попытки.");
         }
@@ -62,16 +64,17 @@ public class WordleGame {
         attempts.add(normalizedGuess);
         steps--;
 
+        lastAnalysis = analyzeGuess(normalizedGuess);
+
         if (normalizedGuess.equals(answer)) {
-            throw new GameWonException("Поздравляем! Вы угадали слово!");
+            log.println("Попытка: " + normalizedGuess + " -> " + lastAnalysis + " [УГАДАНО!]");
+            return true;
         }
 
-        String analysis = analyzeGuess(normalizedGuess);
-        updateKnowledge(normalizedGuess, analysis);
+        updateKnowledge(normalizedGuess, lastAnalysis);
+        log.println("Попытка: " + normalizedGuess + " -> " + lastAnalysis);
 
-        log.println("Попытка: " + normalizedGuess + " -> " + analysis);
-
-        return analysis;
+        return false;
     }
 
     private String analyzeGuess(String guess) {
@@ -112,6 +115,10 @@ public class WordleGame {
                 }
             }
         }
+    }
+
+    public String getLastAnalysis() {
+        return lastAnalysis;
     }
 
     public String getHint() {

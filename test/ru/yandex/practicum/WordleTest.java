@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -68,8 +69,8 @@ class WordleTest {
             writer.write("дедок\n");
         }
 
-        ru.yandex.practicum.WordleDictionaryLoader loader = new ru.yandex.practicum.WordleDictionaryLoader();
-        ru.yandex.practicum.WordleDictionary loadedDictionary = loader.load(dictionaryFile.getAbsolutePath());
+        WordleDictionaryLoader loader = new WordleDictionaryLoader();
+        WordleDictionary loadedDictionary = loader.load(dictionaryFile.getAbsolutePath());
 
         assertNotNull(loadedDictionary);
         assertEquals(4, loadedDictionary.getWords().size());
@@ -83,7 +84,7 @@ class WordleTest {
 
     @Test
     void testWordleGameInitialization() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
 
         assertNotNull(game.getAnswer());
         assertEquals(5, game.getAnswer().length());
@@ -93,49 +94,45 @@ class WordleTest {
     }
 
     @Test
-    void testWordleGameMakeGuess() {
+    void testWordleGameMakeCorrectGuess() {
         WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
-        assertThrows(GameWonException.class, () -> {
-            game.makeGuess(answer);
-        });
+        try {
+            boolean isCorrect = game.makeGuess(answer);
+            assertTrue(isCorrect);
+            assertTrue(game.isGameOver());
+            assertEquals(5, game.getRemainingSteps());
+        } catch (WordleException e) {
+            fail("Не должно быть исключения при правильной догадке: " + e.getMessage());
+        }
     }
 
     @Test
     void testWordleGameInvalidWordLength() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
 
-        try {
+        assertThrows(WordleGameException.class, () -> {
             game.makeGuess("аб");
-            fail("Expected Exception for short word");
-        } catch (Exception e) {
-            assertEquals("Слово должно состоять из 5 букв", e.getMessage());
-        }
+        });
 
-        try {
+        assertThrows(WordleGameException.class, () -> {
             game.makeGuess("длинноеслово");
-            fail("Expected Exception for long word");
-        } catch (Exception e) {
-            assertEquals("Слово должно состоять из 5 букв", e.getMessage());
-        }
+        });
     }
 
     @Test
     void testWordleGameWordNotInDictionary() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
 
-        try {
+        assertThrows(WordleGameException.class, () -> {
             game.makeGuess("несущ");
-            fail("Expected Exception for word not in dictionary");
-        } catch (Exception e) {
-            assertEquals("Слово не найдено в словаре", e.getMessage());
-        }
+        });
     }
 
     @Test
     void testWordleGameGetHint() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
 
         String hint = game.getHint();
         assertNotNull(hint);
@@ -145,25 +142,25 @@ class WordleTest {
 
     @Test
     void testWordleGameMultipleGuesses() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
-        String guess = dictionary.getWords().stream()
+        String wrongGuess = dictionary.getWords().stream()
                 .filter(word -> !word.equals(answer))
                 .findFirst()
                 .orElse("казак");
 
         try {
-            String analysis = game.makeGuess(guess);
-            assertEquals(5, analysis.length());
+            boolean isCorrect = game.makeGuess(wrongGuess);
+            assertFalse(isCorrect);
             assertEquals(5, game.getRemainingSteps());
             assertEquals(1, game.getAttempts().size());
-            assertTrue(game.getAttempts().contains(guess));
-        } catch (Exception e) {
+            assertTrue(game.getAttempts().contains(wrongGuess));
 
-            if (e.getMessage().contains("Поздравляем")) {
-                return;
-            }
+            String analysis = game.getLastAnalysis();
+            assertNotNull(analysis);
+            assertEquals(5, analysis.length());
+        } catch (WordleException e) {
             fail("Unexpected exception: " + e.getMessage());
         }
     }
@@ -178,8 +175,8 @@ class WordleTest {
             writer.write("топот\n");
         }
 
-        ru.yandex.practicum.WordleDictionaryLoader loader = new ru.yandex.practicum.WordleDictionaryLoader();
-        ru.yandex.practicum.WordleDictionary loadedDictionary = loader.load(dictionaryFile.getAbsolutePath());
+        WordleDictionaryLoader loader = new WordleDictionaryLoader();
+        WordleDictionary loadedDictionary = loader.load(dictionaryFile.getAbsolutePath());
 
         assertNotNull(loadedDictionary);
         assertTrue(loadedDictionary.contains("аббат"));
@@ -189,31 +186,35 @@ class WordleTest {
 
     @Test
     void testWordleGameAnalysisFormat() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
 
         String answer = game.getAnswer();
-        String guess = dictionary.getWords().stream()
+        String wrongGuess = dictionary.getWords().stream()
                 .filter(word -> !word.equals(answer))
                 .findFirst()
                 .orElse("радар");
 
         try {
-            String analysis = game.makeGuess(guess);
+            boolean isCorrect = game.makeGuess(wrongGuess);
+            assertFalse(isCorrect);
+
+            String analysis = game.getLastAnalysis();
+            assertNotNull(analysis);
             assertEquals(5, analysis.length());
 
             for (char c : analysis.toCharArray()) {
                 assertTrue(c == '+' || c == '^' || c == '-');
             }
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Поздравляем"));
+        } catch (WordleException e) {
+            fail("Unexpected exception: " + e.getMessage());
         }
     }
 
     @Test
     void testWordleGameWithPalindromeWords() {
         List<String> palindromeWords = Arrays.asList("радар", "казак", "топот", "шалаш", "ротор");
-        ru.yandex.practicum.WordleDictionary palindromeDict = new ru.yandex.practicum.WordleDictionary(palindromeWords);
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(palindromeDict, log);
+        WordleDictionary palindromeDict = new WordleDictionary(palindromeWords);
+        WordleGame game = new WordleGame(palindromeDict, log);
 
         assertNotNull(game.getAnswer());
         assertEquals(5, game.getAnswer().length());
@@ -222,36 +223,38 @@ class WordleTest {
 
     @Test
     void testWordleGameAttemptsTracking() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
         assertTrue(game.getAttempts().isEmpty());
 
-        List<String> guesses = dictionary.getWords().stream()
+        List<String> wrongGuesses = dictionary.getWords().stream()
                 .filter(word -> !word.equals(answer))
                 .limit(2)
-                .toList();
+                .collect(Collectors.toList());
 
-        if (guesses.size() < 2) {
+        if (wrongGuesses.size() < 2) {
             return;
         }
 
         try {
-            game.makeGuess(guesses.get(0));
+            boolean isCorrect1 = game.makeGuess(wrongGuesses.get(0));
+            assertFalse(isCorrect1);
             assertEquals(1, game.getAttempts().size());
-            assertEquals(guesses.get(0), game.getAttempts().get(0));
+            assertEquals(wrongGuesses.get(0), game.getAttempts().get(0));
 
-            game.makeGuess(guesses.get(1));
+            boolean isCorrect2 = game.makeGuess(wrongGuesses.get(1));
+            assertFalse(isCorrect2);
             assertEquals(2, game.getAttempts().size());
-            assertEquals(guesses.get(1), game.getAttempts().get(1));
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Поздравляем"));
+            assertEquals(wrongGuesses.get(1), game.getAttempts().get(1));
+        } catch (WordleException e) {
+            fail("Unexpected exception: " + e.getMessage());
         }
     }
 
     @Test
     void testWordleGameGetAnswer() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
         assertNotNull(answer);
@@ -261,23 +264,74 @@ class WordleTest {
 
     @Test
     void testWordleGameRemainingSteps() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
         assertEquals(6, game.getRemainingSteps());
 
-        String guess = dictionary.getWords().stream()
+        String wrongGuess = dictionary.getWords().stream()
                 .filter(word -> !word.equals(answer))
                 .findFirst()
                 .orElse("заказ");
 
         try {
-            game.makeGuess(guess);
+            boolean isCorrect = game.makeGuess(wrongGuess);
+            assertFalse(isCorrect);
             assertEquals(5, game.getRemainingSteps());
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Поздравляем"));
-            assertEquals(5, game.getRemainingSteps());
+        } catch (WordleException e) {
+            fail("Unexpected exception: " + e.getMessage());
         }
     }
 
+    @Test
+    void testWordleGameGameOverException() {
+        WordleGame game = new WordleGame(dictionary, log);
+
+        String answer = game.getAnswer();
+        List<String> wrongGuesses = dictionary.getWords().stream()
+                .filter(word -> !word.equals(answer))
+                .limit(6)
+                .collect(Collectors.toList());
+
+        if (wrongGuesses.size() < 6) {
+            return;
+        }
+
+        for (String guess : wrongGuesses) {
+            try {
+                boolean isCorrect = game.makeGuess(guess);
+                assertFalse(isCorrect, "Попытка должна быть неправильной");
+            } catch (WordleException e) {
+                fail("Неожиданное исключение при попытке: " + guess + " - " + e.getMessage());
+            }
+        }
+
+        assertThrows(GameOverException.class, () -> {
+            game.makeGuess("любое_слово");
+        });
+
+        assertEquals(0, game.getRemainingSteps());
+        assertTrue(game.isGameOver());
+    }
+
+    @Test
+    void testWordleGameLastAnalysis() {
+        WordleGame game = new WordleGame(dictionary, log);
+
+        assertNull(game.getLastAnalysis(), "До первой попытки getLastAnalysis() должен возвращать null");
+
+        String answer = game.getAnswer();
+        String wrongGuess = dictionary.getWords().stream()
+                .filter(word -> !word.equals(answer))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Не найдено неправильное слово для теста"));
+
+        try {
+            game.makeGuess(wrongGuess);
+            assertNotNull(game.getLastAnalysis(), "После попытки должен быть анализ");
+            assertEquals(5, game.getLastAnalysis().length());
+        } catch (WordleException e) {
+            fail("Unexpected exception: " + e.getMessage());
+        }
+    }
 }

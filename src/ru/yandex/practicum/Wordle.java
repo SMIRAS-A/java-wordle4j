@@ -15,12 +15,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Wordle {
-    private static final int MAX_ATTEMPTS = 6; // Вынес магическое число в константу
-    private static final int WORD_LENGTH = 5;  // Вынес магическое число в константу
+    private static final int MAX_ATTEMPTS = 6;
+    private static final int WORD_LENGTH = 5;
 
     public static void main(String[] args) {
-        // Читаю файл через try-with-resources
-        try (PrintWriter log = new PrintWriter(new FileWriter("wordle.log", StandardCharsets.UTF_8), true)) {
+        try (PrintWriter log = new PrintWriter(new FileWriter("wordle.log", StandardCharsets.UTF_8),
+                true)) {
             WordleDictionaryLoader loader = new WordleDictionaryLoader();
             WordleDictionary dictionary = loader.load("words_ru.txt");
 
@@ -28,8 +28,11 @@ public class Wordle {
 
             try (Scanner scanner = new Scanner(System.in, "UTF-8")) {
                 System.out.println("Добро пожаловать в игру Wordle!");
-                System.out.println("У вас есть " + MAX_ATTEMPTS + " попыток, чтобы угадать слово из " + WORD_LENGTH + " букв.");
+                System.out.println("У вас есть " + MAX_ATTEMPTS + " попыток, чтобы угадать слово из " + WORD_LENGTH
+                        + " букв.");
                 System.out.println("Введите слово или нажмите Enter для подсказки.");
+
+                boolean gameWon = false;
 
                 while (!game.isGameOver()) {
                     System.out.print("> ");
@@ -46,12 +49,19 @@ public class Wordle {
                     }
 
                     try {
-                        String analysis = game.makeGuess(input);
-                        System.out.println("> " + analysis);
-                    } catch (GameWonException e) { // Окончание игры реализовал через кастомные Exception
-                        System.out.println(e.getMessage());
-                        System.out.println("Вы выиграли за " + (MAX_ATTEMPTS - game.getRemainingSteps()) + " попыток!");
-                        break;
+
+                        boolean isCorrectGuess = game.makeGuess(input);
+
+                        if (isCorrectGuess) {
+                            System.out.println("Поздравляем! Вы угадали слово!");
+                            System.out.println("Вы выиграли за " + (MAX_ATTEMPTS - game.getRemainingSteps()) + " попыток!");
+                            gameWon = true;
+                            break;
+                        } else {
+                            String analysis = game.getLastAnalysis();
+                            System.out.println("> " + analysis);
+                        }
+
                     } catch (GameOverException e) {
                         System.out.println(e.getMessage());
                         System.out.println("Загаданное слово: " + game.getAnswer());
@@ -61,7 +71,7 @@ public class Wordle {
                     }
                 }
 
-                if (game.getRemainingSteps() == 0 && !game.getAttempts().contains(game.getAnswer())) {
+                if (!gameWon && game.getRemainingSteps() == 0) {
                     System.out.println("К сожалению, вы проиграли.");
                     System.out.println("Загаданное слово: " + game.getAnswer());
                 }

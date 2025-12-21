@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Random;
 
 public class WordleDictionary {
-    private static final int WORD_LENGTH = 5; // Вынес магическое число в константу
+    private static final int WORD_LENGTH = 5;
     private final List<String> words;
-    private final Random random; // Добавил поле random в классе
+    private final Random random;
 
     public WordleDictionary(List<String> words) {
         this.words = words;
@@ -20,11 +20,9 @@ public class WordleDictionary {
 
     public String getRandomWord() {
         if (words.isEmpty()) {
-            // Кидать нужно свою ошибку (Тут я не совсем понял что требуется сделать)
             throw new IllegalStateException("Словарь пуст");
         }
 
-        // Использовал класс рандом Random и метод nextInt
         return words.get(random.nextInt(words.size()));
     }
 
