@@ -1,5 +1,4 @@
 package ru.yandex.practicum;
-
 /*
 в этом классе хранится словарь и состояние игры
     текущий шаг
@@ -17,56 +16,60 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WordleGame {
+    private static final int MAX_ATTEMPTS = 6; // Вынес магическое число в константу
+    private static final int WORD_LENGTH = 5;  // Вынес магическое число в константу
 
-    private String answer;
+    private final String answer;
     private int steps;
-    private ru.yandex.practicum.WordleDictionary dictionary;
-    private PrintWriter log;
-    private List<Character> correctPositions;
-    private List<Character> wrongPositions;
-    private List<Character> absentLetters;
-    private List<String> attempts;
+    private final WordleDictionary dictionary;
+    private final PrintWriter log;
+    private final List<Character> correctPositions;
+    private final List<Character> wrongPositions;
+    private final List<Character> absentLetters;
+    private final List<String> attempts;
 
-    public WordleGame(ru.yandex.practicum.WordleDictionary dictionary, PrintWriter log) {
+    public WordleGame(WordleDictionary dictionary, PrintWriter log) {
         this.dictionary = dictionary;
         this.log = log;
         this.answer = dictionary.getRandomWord();
-        this.steps = 6;
+        this.steps = MAX_ATTEMPTS;
         this.correctPositions = new ArrayList<>();
         this.wrongPositions = new ArrayList<>();
         this.absentLetters = new ArrayList<>();
         this.attempts = new ArrayList<>();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < WORD_LENGTH; i++) {
             correctPositions.add(' ');
             wrongPositions.add(' ');
         }
     }
 
-    public String makeGuess(String guess) throws Exception {
+    public String makeGuess(String guess) throws WordleGameException {
         if (steps <= 0) {
-            throw new Exception("Игра окончена. Закончились попытки.");
+            throw new GameOverException("Игра окончена. Закончились попытки.");
         }
 
         String normalizedGuess = dictionary.normalizeWord(guess);
 
-        if (normalizedGuess.length() != 5) {
-            throw new Exception("Слово должно состоять из 5 букв");
+        if (normalizedGuess.length() != WORD_LENGTH) {
+            throw new WordleGameException("Слово должно состоять из " + WORD_LENGTH + " букв");
         }
 
         if (!dictionary.contains(normalizedGuess)) {
-            throw new Exception("Слово не найдено в словаре");
+            throw new WordleGameException("Слово не найдено в словаре");
         }
 
         attempts.add(normalizedGuess);
         steps--;
 
         if (normalizedGuess.equals(answer)) {
-            throw new Exception("Поздравляем! Вы угадали слово!");
+            throw new GameWonException("Поздравляем! Вы угадали слово!");
         }
 
         String analysis = analyzeGuess(normalizedGuess);
         updateKnowledge(normalizedGuess, analysis);
+
+        log.println("Попытка: " + normalizedGuess + " -> " + analysis);
 
         return analysis;
     }
@@ -74,7 +77,7 @@ public class WordleGame {
     private String analyzeGuess(String guess) {
         StringBuilder result = new StringBuilder();
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < WORD_LENGTH; i++) {
             char guessChar = guess.charAt(i);
 
             if (guessChar == answer.charAt(i)) {
@@ -90,7 +93,7 @@ public class WordleGame {
     }
 
     private void updateKnowledge(String guess, String analysis) {
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < WORD_LENGTH; i++) {
             char guessChar = guess.charAt(i);
             char analysisChar = analysis.charAt(i);
 
@@ -130,5 +133,4 @@ public class WordleGame {
     public boolean isGameOver() {
         return steps <= 0 || attempts.contains(answer);
     }
-
 }

@@ -13,8 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WordleDictionaryLoader {
+    private static final int WORD_LENGTH = 5; // Вынес магическое число в константу
 
-    public ru.yandex.practicum.WordleDictionary load(String filename) throws IOException {
+    public WordleDictionary load(String filename) throws IOException, WordleDictionaryException {
         List<String> words = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(
@@ -23,7 +24,8 @@ public class WordleDictionaryLoader {
             String line;
             while ((line = reader.readLine()) != null) {
                 String word = line.trim().toLowerCase().replace('ё', 'е');
-                if (word.length() == 5) {
+
+                if (word.length() == WORD_LENGTH) {
                     boolean valid = true;
                     for (char c : word.toCharArray()) {
                         if (c < 'а' || c > 'я') {
@@ -39,10 +41,9 @@ public class WordleDictionaryLoader {
         }
 
         if (words.isEmpty()) {
-            throw new IOException("Словарь пуст");
+            throw new WordleDictionaryException("Словарь пуст");
         }
 
-        return new ru.yandex.practicum.WordleDictionary(words);
+        return new WordleDictionary(words);
     }
-
 }

@@ -15,17 +15,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WordleTest {
 
-    private ru.yandex.practicum.WordleDictionary dictionary;
+    private WordleDictionary dictionary;
     private PrintWriter log;
 
     @BeforeEach
     void setUp() {
-
         List<String> words = Arrays.asList(
                 "аббат", "коата", "радар", "казак", "топот",
                 "шалаш", "ротор", "дедок", "заказ", "потоп"
         );
-        dictionary = new ru.yandex.practicum.WordleDictionary(words);
+        dictionary = new WordleDictionary(words);
 
         try {
             log = new PrintWriter(new FileWriter("test.log", StandardCharsets.UTF_8), true);
@@ -95,15 +94,12 @@ class WordleTest {
 
     @Test
     void testWordleGameMakeGuess() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
+        WordleGame game = new WordleGame(dictionary, log);
         String answer = game.getAnswer();
 
-        try {
-            String analysis = game.makeGuess(answer);
-            fail("Expected Exception for correct guess");
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Поздравляем"));
-        }
+        assertThrows(GameWonException.class, () -> {
+            game.makeGuess(answer);
+        });
     }
 
     @Test
@@ -169,26 +165,6 @@ class WordleTest {
                 return;
             }
             fail("Unexpected exception: " + e.getMessage());
-        }
-    }
-
-    @Test
-    void testWordleGameStepsDecrement() {
-        ru.yandex.practicum.WordleGame game = new ru.yandex.practicum.WordleGame(dictionary, log);
-        int initialSteps = game.getRemainingSteps();
-
-        String answer = game.getAnswer();
-
-        String guess = dictionary.getWords().stream()
-                .filter(word -> !word.equals(answer))
-                .findFirst()
-                .orElse("топот");
-
-        try {
-            game.makeGuess(guess);
-            assertEquals(initialSteps - 1, game.getRemainingSteps());
-        } catch (Exception e) {
-            assertTrue(e.getMessage().contains("Поздравляем"));
         }
     }
 

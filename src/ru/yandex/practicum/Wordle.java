@@ -15,27 +15,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Wordle {
+    private static final int MAX_ATTEMPTS = 6; // Вынес магическое число в константу
+    private static final int WORD_LENGTH = 5;  // Вынес магическое число в константу
 
     public static void main(String[] args) {
-        PrintWriter log = null;
-
-        try {
-            log = new PrintWriter(new FileWriter("wordle.log", StandardCharsets.UTF_8), true);
-
+        // Читаю файл через try-with-resources
+        try (PrintWriter log = new PrintWriter(new FileWriter("wordle.log", StandardCharsets.UTF_8), true)) {
             WordleDictionaryLoader loader = new WordleDictionaryLoader();
             WordleDictionary dictionary = loader.load("words_ru.txt");
 
             WordleGame game = new WordleGame(dictionary, log);
 
-            Scanner scanner = new Scanner(System.in, "UTF-8");
-            boolean gameRunning = true;
+            try (Scanner scanner = new Scanner(System.in, "UTF-8")) {
+                System.out.println("Добро пожаловать в игру Wordle!");
+                System.out.println("У вас есть " + MAX_ATTEMPTS + " попыток, чтобы угадать слово из " + WORD_LENGTH + " букв.");
+                System.out.println("Введите слово или нажмите Enter для подсказки.");
 
-            System.out.println("Добро пожаловать в игру Wordle!");
-            System.out.println("У вас есть 6 попыток, чтобы угадать слово из 5 букв.");
-            System.out.println("Введите слово или нажмите Enter для подсказки.");
-
-            while (gameRunning && !game.isGameOver()) {
-                try {
+                while (!game.isGameOver()) {
                     System.out.print("> ");
                     String input = scanner.nextLine().trim();
 
@@ -49,40 +45,37 @@ public class Wordle {
                         continue;
                     }
 
-                    String analysis = game.makeGuess(input);
-                    System.out.println("> " + analysis);
-
-                } catch (Exception e) {
-                    if (e.getMessage().contains("Поздравляем")) {
-                        gameRunning = false;
+                    try {
+                        String analysis = game.makeGuess(input);
+                        System.out.println("> " + analysis);
+                    } catch (GameWonException e) { // Окончание игры реализовал через кастомные Exception
                         System.out.println(e.getMessage());
-                        System.out.println("Вы выиграли за " + (6 - game.getRemainingSteps()) + " попыток!");
-                    } else if (e.getMessage().contains("Игра окончена")) {
-                        gameRunning = false;
+                        System.out.println("Вы выиграли за " + (MAX_ATTEMPTS - game.getRemainingSteps()) + " попыток!");
+                        break;
+                    } catch (GameOverException e) {
                         System.out.println(e.getMessage());
                         System.out.println("Загаданное слово: " + game.getAnswer());
-                    } else {
+                        break;
+                    } catch (WordleGameException e) {
                         System.out.println("Ошибка: " + e.getMessage());
                     }
                 }
-            }
 
-            if (game.getRemainingSteps() == 0 && !game.getAttempts().contains(game.getAnswer())) {
-                System.out.println("К сожалению, вы проиграли.");
-                System.out.println("Загаданное слово: " + game.getAnswer());
-            }
+                if (game.getRemainingSteps() == 0 && !game.getAttempts().contains(game.getAnswer())) {
+                    System.out.println("К сожалению, вы проиграли.");
+                    System.out.println("Загаданное слово: " + game.getAnswer());
+                }
 
-            scanner.close();
+            } catch (Exception e) {
+                System.err.println("Ошибка ввода: " + e.getMessage());
+            }
 
         } catch (IOException e) {
             System.err.println("Ошибка при работе с файлами: " + e.getMessage());
+        } catch (WordleDictionaryException e) {
+            System.err.println("Ошибка словаря: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Непредвиденная ошибка: " + e.getMessage());
-        } finally {
-            if (log != null) {
-                log.close();
-            }
         }
     }
-
 }
